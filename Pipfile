@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 pdfkit = "*"
+boto3 = "*"
 
 [dev-packages]
 pytest = "*"

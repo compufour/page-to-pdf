@@ -4,17 +4,17 @@ provider:
   name: aws
   runtime: python3.6
   region: sa-east-1
-  stage: production
+  stage: homolog
   apiGateway:
     binaryMediaTypes:
-      - "application/pdf"
+      - 'application/pdf'
 plugins:
   - serverless-domain-manager
   - serverless-python-requirements
   - serverless-offline
 custom:
   pythonRequirements:
-     dockerizePip: non-linux
+    dockerizePip: non-linux
   customDomain:
     rest:
       domainName: pagetopdf.clippfacil.com.br
@@ -37,4 +37,3 @@ functions:
           path: pdf
           method: get
           cors: true
-
