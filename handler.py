@@ -3,33 +3,42 @@ import os
 import base64
 import pdfkit
 import boto3
+import dotenv
 from urllib.parse import urlparse
 
 INVENTORY_REPORT_NAME = 'Registro de Inventário'
 bucket_s3 = 'compufour'
 PDF_PATH = '/tmp/out.pdf'
 
-lambda_task_root_env = os.environ.get("LAMBDA_TASK_ROOT")
-lambda_task_root = "" if not lambda_task_root_env else lambda_task_root_env
-os.environ["PATH"] = os.environ["PATH"] + ":" + lambda_task_root + "/bin"
+dotenv.load_dotenv()
 
-def lambda_log(info):
-    print('### Log: ', info)
+if os.environ['ENVIRONMENT'] in ['production', 'homolog']:
+    PATH_WKHTMLTOPDF = '/opt/bin/wkhtmltopdf'
+    PDFKIT_CONFIG = pdfkit.configuration(wkhtmltopdf=PATH_WKHTMLTOPDF)
+else:
+    PDFKIT_CONFIG = pdfkit.configuration()
+
+def lambda_info(e): 
+    print('> ', e)
+
+def lambda_error(e):
+    print('> ERROR: ', e)
 
 def upload_file(pdf_path: str):
+    '''Faz upload para S3'''
     s3_client = boto3.resource('s3')
     file_name = os.path.basename(pdf_path)
-    bucket_path = 'homolog/uploads/reports/report/{}'.format(file_name)
+    bucket_path = 'homolog/uploads/reports/report/' + file_name
     pdf_url = 'https://compufour.s3.amazonaws.com/' + bucket_path
 
     try:
-        lambda_log('Enviando PDF para S3')
+        lambda_info('Enviando PDF para S3')
         s3_client.meta.client.upload_file(pdf_path, bucket_s3, bucket_path, ExtraArgs={'ACL':'public-read'})
-        lambda_log('PDF enviado!')
-        lambda_log(pdf_url)
+        lambda_info('PDF enviado!')
+        lambda_info(pdf_url)
+        return pdf_url
     except Exception as e:
-        lambda_log(e)
-    return pdf_url
+        lambda_error(e)
 
 def format_response(response) -> dict:
     '''Formata a resposta HTTP'''
@@ -56,40 +65,54 @@ def format_response_url(response) -> dict:
         })
     }
 
-def convert_and_upload(page: str) -> str:
-    '''Converte a página para PDF e faz upload para S3'''
-    lambda_log('Iniciando conversão...')
+def format_error_response(e: Exception) -> str:
+    return {
+        "statusCode": 500,
+        "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin" : "*"
+        },
+        "body": json.dumps({
+            'environment': os.environ['ENVIRONMENT'],
+            'error': str(e),
+            'path': os.environ["PATH"]
+        })
+    }
 
-    try:
-        parsed_url = urlparse(page)
-        file_name = os.path.basename(parsed_url.path);
-        formatted_file_name = file_name.split(".", 1)[0]
-        pdf_path = '/tmp/' + formatted_file_name + ".pdf"
-        pdfkit.from_url(page, pdf_path)
-        lambda_log(INVENTORY_REPORT_NAME)
-        return upload_file(pdf_path)
-    except Exception as e:
-        print('### Error: ', e)
+
+def convert_from_url(page: str) -> str:
+    '''Converte a página para PDF'''
+    lambda_info('Iniciando conversão...')
+
+    parsed_url = urlparse(page)
+    file_name = os.path.basename(parsed_url.path);
+    formatted_file_name = file_name.split(".", 1)[0]
+    pdf_path = '/tmp/' + formatted_file_name + ".pdf"
+    pdfkit.from_url(page, pdf_path, configuration=PDFKIT_CONFIG)
+    return pdf_path
 
 def convert(page: str) -> str:
     '''Converte a página para PDF'''
-    pdfkit.from_url(page, PDF_PATH)
+    pdfkit.from_url(page, PDF_PATH, configuration=PDFKIT_CONFIG)
     text = open(PDF_PATH, 'rb').read()
     return base64.b64encode(text).decode('utf-8')
 
 def get(event, _) -> dict:
     '''Trabalha a requisição para converter e responder com HTTP'''
-    if event["queryStringParameters"] and event["queryStringParameters"]["reportUrl"]:
-        page: str = event["queryStringParameters"]["reportUrl"]
-        report_title = event["queryStringParameters"]["reportTitle"]
-    else:
-        page: str = "www.google.com"
-        report_title = ''
+    try:
+        if event["queryStringParameters"] and event["queryStringParameters"]["reportUrl"]:
+            page: str = event["queryStringParameters"]["reportUrl"]
+            report_title = event["queryStringParameters"]["reportTitle"]
+        else:
+            page: str = "www.google.com"
+            report_title = ''
 
-    if report_title.replace("+", " ") == INVENTORY_REPORT_NAME:
-        converted: str = convert_and_upload(page)
-        return format_response_url(converted)
+        if report_title.replace("+", " ") == INVENTORY_REPORT_NAME:
+            pdf_path = convert_from_url(page)
+            pdf_uploaded_path = upload_file(pdf_path)
+            return format_response_url(pdf_uploaded_path)
 
-    converted: str = convert(page)
-    return format_response(converted)
-
+        converted: str = convert(page)
+        return format_response(converted)
+    except Exception as e:
+        format_error_response(e)

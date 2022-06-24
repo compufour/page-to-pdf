@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 pdfkit = "*"
 boto3 = "*"
+python-dotenv = "*"
 
 [dev-packages]
 pytest = "*"

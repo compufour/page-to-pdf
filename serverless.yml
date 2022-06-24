@@ -1,30 +1,25 @@
 service: page-to-pdf
 frameworkVersion: '3'
+useDotenv: true
 provider:
   name: aws
-  runtime: python3.6
+  runtime: python3.9
+  layers:
+    - arn:aws:lambda:sa-east-1:347599033421:layer:wkhtmltopdf-0_12_6:1
+  environment:
+    ENVIRONMENT: ${env:ENVIRONMENT}
   region: sa-east-1
   stage: homolog
   apiGateway:
     binaryMediaTypes:
       - 'application/pdf'
 plugins:
-  - serverless-domain-manager
+  - serverless-dotenv-plugin
   - serverless-python-requirements
   - serverless-offline
 custom:
   pythonRequirements:
     dockerizePip: non-linux
-  customDomain:
-    rest:
-      domainName: pagetopdf.clippfacil.com.br
-      certificateName: '*.clippfacil.com.br'
-      hostZoneId: 'ZEAQCS95W4ION'
-      endpointType: regional
-      securityPolicy: tls_1_2
-      basePath: ''
-      apiType: rest
-      createRoute53Record: true
 package:
   exclude:
     - node_modules/**

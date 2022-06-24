@@ -4,13 +4,18 @@
   "description": "Transforma páginas web em pdf",
   "main": "index.js",
   "scripts": {
+    "local": "npx serverless offline --httpPort 9009 --stage development",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "serverless-domain-manager": "^5.1.0",
+    "serverless-dotenv-plugin": "^4.0.1",
     "serverless-offline": "^8.8.0",
     "serverless-python-requirements": "^5.1.0"
+  },
+  "dependencies": {
+    "serverless": "^3.19.0"
   }
 }
