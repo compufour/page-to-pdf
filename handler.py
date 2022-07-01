@@ -11,6 +11,7 @@ bucket_s3 = 'compufour'
 PDF_PATH = '/tmp/out.pdf'
 homolog_path = 'homolog/uploads/reports/report/'
 production_path = 'production/uploads/reports/report/'
+PDFKIT_OPTIONS = {'zoom': 1.3}
 
 dotenv.load_dotenv()
 
@@ -105,7 +106,7 @@ def convert_from_url(page: str) -> str:
 
 def convert(page: str) -> str:
     '''Converte a página para PDF'''
-    pdfkit.from_url(page, PDF_PATH, configuration=PDFKIT_CONFIG)
+    pdfkit.from_url(page, PDF_PATH, options=PDFKIT_OPTIONS, configuration=PDFKIT_CONFIG)
     text = open(PDF_PATH, 'rb').read()
     return base64.b64encode(text).decode('utf-8')
 

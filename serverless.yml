@@ -6,8 +6,10 @@ provider:
   runtime: python3.9
   layers:
     - arn:aws:lambda:sa-east-1:347599033421:layer:wkhtmltopdf-0_12_6:1
+    - arn:aws:lambda:sa-east-1:347599033421:layer:amazon_linux_fonts:1
   environment:
     ENVIRONMENT: ${env:ENVIRONMENT}
+    FONTCONFIG_PATH: /opt/etc/fonts
   region: sa-east-1
   stage: homolog
   apiGateway:
