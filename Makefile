@@ -1,5 +1,9 @@
 .PHONY : all
 all: deploy
-deploy:
+deployHomolog:
 	./package.sh
-	sls deploy
+	npx serverless deploy --stage homolog
+
+deployProduction:
+	./package.sh
+	npx serverless deploy --stage production
